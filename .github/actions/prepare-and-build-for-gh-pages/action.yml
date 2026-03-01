@@ -1,0 +1,103 @@
+name: Prepare and build for GitHub Pages
+description: Prepare repository, build for GitHub Pages, and ensure CNAME file is created
+
+inputs:
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: "20"
+  github-token:
+    description: GitHub token used for authenticated push
+    required: true
+  github-repository:
+    description: Repository in owner/name format
+    required: false
+    default: ""
+  site_url:
+    description: Public site URL used to build CNAME content
+    required: false
+    default: ""
+  output_path:
+    description: Path to output build directory
+    required: false
+    default: "dist"
+  build-env-vars:
+    description: Multiline KEY=VALUE pairs exported before build/deploy
+    required: false
+    default: ""
+  build-env-file-path:
+    description: Optional path to write env file before build
+    required: false
+    default: ""
+  build-env-file-content:
+    description: Optional content written to build-env-file-path
+    required: false
+    default: ""
+  build-command:
+    description: Command used to build the project
+    required: false
+    default: "npm run build"
+  deploy-command:
+    description: Command used to deploy to GitHub Pages
+    required: false
+    default: "npm run deploy"
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare repository
+      uses: ./.github/actions/prepare-repo
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Configure Git for push
+      uses: ./.github/actions/configure-git-push
+      with:
+        github-token: ${{ inputs.github-token }}
+        github-repository: ${{ inputs.github-repository }}
+
+    - name: Prepare build environment
+      shell: bash
+      env:
+        INPUT_BUILD_ENV_VARS: ${{ inputs.build-env-vars }}
+        INPUT_BUILD_ENV_FILE_PATH: ${{ inputs.build-env-file-path }}
+        INPUT_BUILD_ENV_FILE_CONTENT: ${{ inputs.build-env-file-content }}
+      run: |
+        if [ -n "$INPUT_BUILD_ENV_FILE_PATH" ]; then
+          mkdir -p "$(dirname "$INPUT_BUILD_ENV_FILE_PATH")"
+          printf "%s" "$INPUT_BUILD_ENV_FILE_CONTENT" > "$INPUT_BUILD_ENV_FILE_PATH"
+          echo "Prepared env file at $INPUT_BUILD_ENV_FILE_PATH"
+        fi
+
+        if [ -n "$INPUT_BUILD_ENV_VARS" ]; then
+          while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+            line="${raw_line%$'\r'}"
+
+            if [ -z "$line" ] || [[ "$line" =~ ^[[:space:]]*# ]]; then
+              continue
+            fi
+
+            if ! [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+              echo "Invalid env entry: $line"
+              echo "Expected format: KEY=VALUE"
+              exit 1
+            fi
+
+            echo "$line" >> "$GITHUB_ENV"
+          done <<< "$INPUT_BUILD_ENV_VARS"
+          echo "Exported custom environment variables for build/deploy"
+        fi
+
+    - name: Build for GitHub Pages
+      shell: bash
+      run: ${{ inputs.build-command }}
+
+    - name: Ensure CNAME file
+      uses: ./.github/actions/ensure-cname
+      with:
+        site_url: ${{ inputs.site_url }}
+        output_path: ${{ inputs.output_path }}
+    
+    - name: Push to GitHub Pages
+      shell: bash
+      run: ${{ inputs.deploy-command }}

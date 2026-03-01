@@ -7,18 +7,26 @@ inputs:
     required: true
   github-repository:
     description: Repository in owner/name format
-    required: true
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
-    - name: Configure Git
+    - name: Configure Git and authenticated remote
       shell: bash
+      env:
+        INPUT_GITHUB_REPOSITORY: ${{ inputs.github-repository }}
       run: |
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
+        repository="$INPUT_GITHUB_REPOSITORY"
+        if [ -z "$repository" ]; then
+          repository="$GITHUB_REPOSITORY"
+        fi
+        if [ -z "$repository" ]; then
+          echo "Unable to detect repository. Pass 'github-repository' explicitly."
+          exit 1
+        fi
 
-    - name: Set remote URL for push (auth)
-      shell: bash
-      run: |
-        git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/${{ inputs.github-repository }}.git"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
+        git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/${repository}.git"

@@ -4,10 +4,12 @@ description: Create CNAME file in build output when SITE_URL is set
 inputs:
   site_url:
     description: Public site URL for CNAME content
-    required: true
+    required: false
+    default: ""
   output_path:
     description: Path to output build directory
-    required: true
+    required: false
+    default: "dist"
 
 runs:
   using: composite
@@ -20,6 +22,17 @@ runs:
         if [ -z "$SITE_URL" ]; then
           echo "SITE_URL is not set, skipping CNAME file."
         else
-          printf "%s\n" "$SITE_URL" > "${{ inputs.output_path }}/CNAME"
-          echo "Wrote CNAME file with content: $SITE_URL to ${{ inputs.output_path }}/CNAME"
+          cname="$SITE_URL"
+          cname="${cname#http://}"
+          cname="${cname#https://}"
+          cname="${cname%%/*}"
+
+          if [ -z "$cname" ]; then
+            echo "Could not derive CNAME host from SITE_URL='$SITE_URL'"
+            exit 1
+          fi
+
+          mkdir -p "${{ inputs.output_path }}"
+          printf "%s\n" "$cname" > "${{ inputs.output_path }}/CNAME"
+          echo "Wrote CNAME file with content: $cname to ${{ inputs.output_path }}/CNAME"
         fi
