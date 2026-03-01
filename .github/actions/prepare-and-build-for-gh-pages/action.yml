@@ -46,12 +46,12 @@ runs:
   using: composite
   steps:
     - name: Prepare repository
-      uses: ./.github/actions/prepare-repo
+      uses: iktnb/github-utils/.github/actions/prepare-repo@v1
       with:
         node-version: ${{ inputs.node-version }}
 
     - name: Configure Git for push
-      uses: ./.github/actions/configure-git-push
+      uses: iktnb/github-utils/.github/actions/configure-git-push@v1
       with:
         github-token: ${{ inputs.github-token }}
         github-repository: ${{ inputs.github-repository }}
@@ -93,7 +93,7 @@ runs:
       run: ${{ inputs.build-command }}
 
     - name: Ensure CNAME file
-      uses: ./.github/actions/ensure-cname
+      uses: iktnb/github-utils/.github/actions/ensure-cname@v1
       with:
         site_url: ${{ inputs.site_url }}
         output_path: ${{ inputs.output_path }}
