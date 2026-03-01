@@ -1,0 +1,24 @@
+name: Configure git push
+description: Configure git identity and authenticated remote URL
+
+inputs:
+  github-token:
+    description: GitHub token used for authenticated push
+    required: true
+  github-repository:
+    description: Repository in owner/name format
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure Git
+      shell: bash
+      run: |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+
+    - name: Set remote URL for push (auth)
+      shell: bash
+      run: |
+        git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/${{ inputs.github-repository }}.git"

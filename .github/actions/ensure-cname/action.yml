@@ -1,0 +1,22 @@
+name: Ensure CNAME file
+description: Create storybook-static/CNAME when NEXT_PUBLIC_SITE_URL is set
+
+inputs:
+  next-public-site-url:
+    description: Public site URL for CNAME content
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure CNAME file
+      shell: bash
+      env:
+        NEXT_PUBLIC_SITE_URL: ${{ inputs.next-public-site-url }}
+      run: |
+        if [ -z "$NEXT_PUBLIC_SITE_URL" ]; then
+          echo "NEXT_PUBLIC_SITE_URL is not set, skipping CNAME file."
+        else
+          printf "%s\n" "$NEXT_PUBLIC_SITE_URL" > storybook-static/CNAME
+          echo "Wrote storybook-static/CNAME: $NEXT_PUBLIC_SITE_URL"
+        fi
